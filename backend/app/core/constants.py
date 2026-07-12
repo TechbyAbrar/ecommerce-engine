@@ -1,3 +1,4 @@
+#app/core/constants.py
 """
 Application-wide constants that don't belong to a single domain.
 """

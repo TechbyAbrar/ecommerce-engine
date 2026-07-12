@@ -1,3 +1,4 @@
+#app/core/exceptions.py
 """
 Base application exceptions and their FastAPI exception handlers.
 
