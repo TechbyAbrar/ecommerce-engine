@@ -41,3 +41,34 @@ class InactiveUserException(AppException):
 
     def __init__(self, message: str = "This user account is inactive"):
         super().__init__(message)
+
+
+class EmailNotVerifiedException(AppException):
+    status_code = status.HTTP_403_FORBIDDEN
+    error_code = "EMAIL_NOT_VERIFIED"
+
+    def __init__(self, message: str = "Verify your email address before signing in"):
+        super().__init__(message)
+
+
+class InvalidOTPException(AppException):
+    error_code = "INVALID_OTP"
+
+    def __init__(self, message: str = "The code is invalid, expired, or has already been used"):
+        super().__init__(message)
+
+
+class OTPRateLimitException(AppException):
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    error_code = "OTP_RATE_LIMITED"
+
+    def __init__(self, message: str = "Please wait before requesting another code"):
+        super().__init__(message)
+
+
+class OTPDeliveryException(AppException):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    error_code = "OTP_DELIVERY_FAILED"
+
+    def __init__(self, message: str = "Unable to deliver a verification code. Please try again later"):
+        super().__init__(message)

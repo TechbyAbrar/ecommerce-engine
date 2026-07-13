@@ -18,3 +18,8 @@ class UserStatus(str, Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
     SUSPENDED = "suspended"
+
+
+class OTPPurpose(str, Enum):
+    EMAIL_VERIFICATION = "email_verification"
+    PASSWORD_RESET = "password_reset"

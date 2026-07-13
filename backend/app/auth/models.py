@@ -5,11 +5,11 @@ ORM models for the auth domain.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, String
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.common.enums import UserRole, UserStatus
+from app.common.enums import OTPPurpose, UserRole, UserStatus
 from app.common.utils import utc_now
 from app.core.database import Base
 
@@ -40,3 +40,37 @@ class User(Base):
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email}>"
+
+
+class OTP(Base):
+    """One-time passwords. Store only a keyed hash, never the OTP itself."""
+
+    __tablename__ = "otps"
+    __table_args__ = (
+        Index(
+            "uq_otps_active_user_purpose",
+            "user_id",
+            "purpose",
+            unique=True,
+            postgresql_where=text("used = false"),
+        ),
+        Index("ix_otps_expires_at", "expires_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    purpose: Mapped[OTPPurpose] = mapped_column(
+        Enum(OTPPurpose, name="otp_purpose"), nullable=False
+    )
+    otp_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )

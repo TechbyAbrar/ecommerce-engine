@@ -9,6 +9,7 @@ from pydantic import BaseModel, EmailStr, field_validator
 
 from app.common.enums import UserRole, UserStatus
 from app.common.validators import normalize_email, validate_password_strength
+from app.core.config import settings
 
 
 class UserCreate(BaseModel):
@@ -30,6 +31,32 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, v: str) -> str:
+        return normalize_email(v)
+
+
+class EmailVerificationRequest(BaseModel):
+    email: EmailStr
+    code: str
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, v: str) -> str:
+        return normalize_email(v)
+
+    @field_validator("code")
+    @classmethod
+    def _validate_code(cls, v: str) -> str:
+        if not v.isascii() or not v.isdigit() or len(v) != settings.OTP_LENGTH:
+            raise ValueError("Invalid verification code")
+        return v
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
 
     @field_validator("email")
     @classmethod

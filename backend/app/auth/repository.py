@@ -42,6 +42,12 @@ class UserRepository:
         )
         await self.db.commit()
 
+    async def mark_email_verified(self, user_id: uuid.UUID) -> None:
+        await self.db.execute(
+            update(User).where(User.id == user_id).values(is_verified=True)
+        )
+        await self.db.commit()
+
     async def replace_refresh_token_jti(
         self, user_id: uuid.UUID, new_jti: str, current_jti: str | None = None
     ) -> bool:
