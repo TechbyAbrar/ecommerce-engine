@@ -19,7 +19,7 @@ from app.auth.repository import UserRepository
 from app.auth.schemas import Token, UserCreate, UserLogin
 from app.auth.security import create_access_token, create_refresh_token, decode_token
 from app.common.enums import TokenType, UserStatus
-from app.core.security import verify_password
+from app.core.security import verify_and_update_password
 
 
 class AuthService:
@@ -40,11 +40,20 @@ class AuthService:
 
     async def authenticate(self, credentials: UserLogin) -> Token:
         user = await self.repository.get_by_email(credentials.email)
-        if not user or not verify_password(credentials.password, user.hashed_password):
+        if not user:
+            raise InvalidCredentialsException()
+
+        is_valid, updated_hash = verify_and_update_password(
+            credentials.password, user.hashed_password
+        )
+        if not is_valid:
             raise InvalidCredentialsException()
 
         if user.status != UserStatus.ACTIVE:
             raise InactiveUserException()
+
+        if updated_hash:
+            await self.repository.update_password_hash(user.id, updated_hash)
 
         return await self._issue_tokens(user.id)
 

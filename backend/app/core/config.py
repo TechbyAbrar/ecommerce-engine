@@ -21,16 +21,13 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # --- Database ---
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/app_db"
+    DATABASE_URL: str = "example_neon_db_url"
 
     # --- JWT / Security ---
     SECRET_KEY: str = "CHANGE_ME_IN_PRODUCTION"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-
-    # --- Password hashing ---
-    PASSWORD_HASH_SCHEME: str = "bcrypt"
 
     # --- CORS ---
     BACKEND_CORS_ORIGINS: list[str] = ["*"]

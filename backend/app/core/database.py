@@ -2,6 +2,10 @@
 """
 Async SQLAlchemy engine, session factory, and declarative base.
 """
+import ssl
+
+ssl_context = ssl.create_default_context()
+
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -16,6 +20,7 @@ engine = create_async_engine(
     echo=settings.DEBUG,
     pool_pre_ping=True,
     future=True,
+    connect_args={"ssl": ssl_context}
 )
 
 AsyncSessionLocal = async_sessionmaker(

@@ -36,6 +36,12 @@ class UserRepository:
         await self.db.refresh(user)
         return user
 
+    async def update_password_hash(self, user_id: uuid.UUID, hashed_password: str) -> None:
+        await self.db.execute(
+            update(User).where(User.id == user_id).values(hashed_password=hashed_password)
+        )
+        await self.db.commit()
+
     async def replace_refresh_token_jti(
         self, user_id: uuid.UUID, new_jti: str, current_jti: str | None = None
     ) -> bool:
