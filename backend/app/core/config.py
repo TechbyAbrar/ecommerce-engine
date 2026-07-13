@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     OTP_MAX_ATTEMPTS: int = 5
     OTP_RESEND_COOLDOWN_SECONDS: int = 60
 
+    # --- Logging ---
+    LOG_LEVEL: str | None = None
+    LOG_DIR: str = "logs"
+    LOG_RETENTION_DAYS: int = 7
+
     # --- CORS ---
     BACKEND_CORS_ORIGINS: list[str] = ["*"]
 
@@ -64,6 +69,8 @@ class Settings(BaseSettings):
             raise ValueError("SMTP_USE_SSL and SMTP_USE_STARTTLS cannot both be enabled")
         if self.OTP_LENGTH < 6 or self.OTP_MAX_ATTEMPTS < 1 or self.OTP_EXPIRE_MINUTES < 1:
             raise ValueError("OTP security settings are invalid")
+        if self.LOG_RETENTION_DAYS < 1:
+            raise ValueError("LOG_RETENTION_DAYS must be at least 1")
         return self
 
 

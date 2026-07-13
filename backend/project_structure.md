@@ -1,4 +1,4 @@
-#project fiel structure
+#project file structure
 
 app/
 │

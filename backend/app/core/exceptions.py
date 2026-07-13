@@ -46,7 +46,10 @@ class ForbiddenException(AppException):
 
 
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
-    logger.warning("AppException: %s (%s)", exc.message, exc.error_code)
+    logger.warning(
+        "application_error",
+        extra={"error_code": exc.error_code, "path": request.url.path},
+    )
     return JSONResponse(
         status_code=exc.status_code,
         content={"success": False, "error_code": exc.error_code, "message": exc.message},
@@ -54,7 +57,10 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
 
 
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    logger.exception("Unhandled exception: %s", exc)
+    logger.error(
+        "unhandled_exception",
+        extra={"exception_type": type(exc).__name__, "path": request.url.path},
+    )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
