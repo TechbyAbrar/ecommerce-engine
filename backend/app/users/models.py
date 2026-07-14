@@ -1,6 +1,7 @@
 #app/users/models.py
-
 """
+app/users/models.py
+
 UserDetails / Address / UserLoyalty models for the ecommerce platform.
 
 ===========================================================================
@@ -109,15 +110,23 @@ class AddressType(str, enum.Enum):
     BILLING = "billing"
 
 
-
+# Loyalty tiers as plain strings + CHECK (see design note #4). Keep this
+# tuple as the single source of truth and reuse it in the constraint and
+# in Pydantic schemas.
 LOYALTY_TIERS = ("bronze", "silver", "gold", "platinum")
 
 
+# --------------------------------------------------------------------------
+# UserDetails (1:1 with User) -- profile data, read-heavy / write-light
+# --------------------------------------------------------------------------
 class UserDetails(Base):
     __tablename__ = "user_details"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
 
+    # 1:1 link to users.id. unique=True + index enforces the 1:1 and is also
+    # the lookup path used on every request (auth middleware, profile page),
+    # so it must stay indexed.
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -132,16 +141,22 @@ class UserDetails(Base):
     )
     avatar_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
 
-    # Denormalized "current default" pointers so rendering a checkout page
-    # never needs to scan addresses -- one row fetch via PK. SET NULL keeps
-    # deleting/deactivating an address from ever touching this row's other
-    # columns or cascading unexpectedly.
-    default_shipping_address_id: Mapped[int | None] = mapped_column(
-        BigInteger, ForeignKey("addresses.id", ondelete="SET NULL"), nullable=True
-    )
-    default_billing_address_id: Mapped[int | None] = mapped_column(
-        BigInteger, ForeignKey("addresses.id", ondelete="SET NULL"), nullable=True
-    )
+    # NOTE: no default_shipping_address_id / default_billing_address_id here
+    # on purpose. Two tables FKing into each other (user_details -> addresses
+    # AND addresses -> user_details) creates a circular dependency that
+    # Alembic autogenerate cannot linearize into a single CREATE TABLE order
+    # (this is exactly the "relation does not exist" error you hit). Instead,
+    # `Address.is_default` (enforced unique per user+type via the partial
+    # index on that table) is the single source of truth for "the default
+    # address" -- one direction of dependency, no cycle. Fetch it with:
+    #   select(Address).where(
+    #       Address.user_details_id == uid,
+    #       Address.address_type == AddressType.SHIPPING,
+    #       Address.is_default.is_(True),
+    #       Address.is_active.is_(True),
+    #   )
+    # which is fully covered by ix_addresses_user_type_active -- same cost
+    # as the old pointer-column lookup, just without the circular FK.
 
     preferred_language: Mapped[str] = mapped_column(
         String(10), server_default="en", nullable=False
@@ -181,12 +196,6 @@ class UserDetails(Base):
         foreign_keys="Address.user_details_id",
         cascade="all, delete-orphan",
         passive_deletes=True,
-    )
-    default_shipping_address = relationship(
-        "Address", foreign_keys=[default_shipping_address_id], post_update=True
-    )
-    default_billing_address = relationship(
-        "Address", foreign_keys=[default_billing_address_id], post_update=True
     )
 
     __table_args__ = (
