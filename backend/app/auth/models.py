@@ -31,7 +31,8 @@ class User(Base):
         Enum(UserStatus, name="user_status"), default=UserStatus.ACTIVE, nullable=False
     )
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    refresh_token_jti: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
@@ -40,6 +41,24 @@ class User(Base):
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email}>"
+
+
+class RefreshSession(Base):
+    """A refresh-token session; revocation is scoped to one device/session."""
+
+    __tablename__ = "refresh_sessions"
+    __table_args__ = (Index("ix_refresh_sessions_user_active", "user_id", "revoked_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    jti: Mapped[str] = mapped_column(String(36), unique=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class OTP(Base):

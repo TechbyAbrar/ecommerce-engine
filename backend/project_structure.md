@@ -7,6 +7,8 @@ app/
 │   ├── database.py
 │   ├── security.py
 │   ├── logging.py
+│   ├── celery.py
+│   ├── email.py
 │   ├── exceptions.py
 │   ├── dependencies.py
 │   └── constants.py
@@ -26,6 +28,8 @@ app/
 │   ├── schemas.py
 │   ├── dependencies.py
 │   ├── security.py
+│   ├── otp_service.py
+│   ├── tasks.py
 │   └── exceptions.py
 │
 ├── users/

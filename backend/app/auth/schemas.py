@@ -91,3 +91,39 @@ class TokenPayload(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, v: str) -> str:
+        return normalize_email(v)
+
+
+class PasswordResetOTPVerificationRequest(EmailVerificationRequest):
+    pass
+
+
+class PasswordResetRequest(EmailVerificationRequest):
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def _validate_password(cls, v: str) -> str:
+        return validate_password_strength(v)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def _validate_password(cls, v: str) -> str:
+        return validate_password_strength(v)

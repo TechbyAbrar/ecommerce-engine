@@ -9,14 +9,25 @@ from typing import Any
 
 from app.core.config import settings
 
-_STRUCTURED_FIELDS = (
+_ACCESS_LOG_FIELDS = (
     "request_id",
     "method",
     "path",
     "status_code",
     "duration_ms",
+)
+
+_APPLICATION_LOG_FIELDS = (
+    "request_id",
+    "method",
+    "path",
+    "status_code",
     "error_code",
     "exception_type",
+    "exception_message",
+    "user_id",
+    "email",
+    "endpoint",
 )
 
 
@@ -24,16 +35,30 @@ class JsonFormatter(logging.Formatter):
     """Emit a small, allow-listed JSON record to avoid accidental secret logging."""
 
     def format(self, record: logging.LogRecord) -> str:
+        timestamp = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+        if record.name == "app.access":
+            payload = {"timestamp": timestamp}
+            for field in _ACCESS_LOG_FIELDS:
+                value = getattr(record, field, None)
+                if value is not None:
+                    payload[field] = value
+            return json.dumps(payload, separators=(",", ":"), default=str)
+
         payload: dict[str, Any] = {
-            "timestamp": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+            "timestamp": timestamp,
             "level": record.levelname,
-            "logger": record.name,
             "event": record.getMessage(),
         }
-        for field in _STRUCTURED_FIELDS:
+        for field in _APPLICATION_LOG_FIELDS:
             value = getattr(record, field, None)
             if value is not None:
                 payload[field] = value
+
+        if record.exc_info:
+            payload["module"] = record.module
+            payload["filename"] = record.filename
+            payload["function"] = record.funcName
+            payload["line_number"] = record.lineno
         return json.dumps(payload, separators=(",", ":"), default=str)
 
 

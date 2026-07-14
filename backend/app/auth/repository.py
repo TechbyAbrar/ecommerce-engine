@@ -4,12 +4,14 @@ Data access layer for the auth domain. Keeps raw SQLAlchemy queries out of
 the service layer so business logic stays storage-agnostic.
 """
 import uuid
+from datetime import datetime, timedelta
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.models import User
+from app.auth.models import RefreshSession, User
 from app.auth.schemas import UserCreate
+from app.common.utils import utc_now
 from app.core.security import hash_password
 
 
@@ -42,24 +44,74 @@ class UserRepository:
         )
         await self.db.commit()
 
+    async def record_login_failure(self, user: User, max_attempts: int, lock_minutes: int) -> None:
+        user.failed_login_attempts += 1
+        if user.failed_login_attempts >= max_attempts:
+            user.locked_until = utc_now() + timedelta(minutes=lock_minutes)
+            user.failed_login_attempts = 0
+        await self.db.commit()
+
+    async def clear_login_failures(self, user: User) -> None:
+        if user.failed_login_attempts or user.locked_until:
+            user.failed_login_attempts = 0
+            user.locked_until = None
+            await self.db.commit()
+
     async def mark_email_verified(self, user_id: uuid.UUID) -> None:
         await self.db.execute(
             update(User).where(User.id == user_id).values(is_verified=True)
         )
         await self.db.commit()
 
-    async def replace_refresh_token_jti(
-        self, user_id: uuid.UUID, new_jti: str, current_jti: str | None = None
-    ) -> bool:
-        statement = update(User).where(User.id == user_id)
-        if current_jti is not None:
-            statement = statement.where(User.refresh_token_jti == current_jti)
+    async def create_refresh_session(
+        self, user_id: uuid.UUID, jti: str, expires_at: datetime
+    ) -> None:
+        self.db.add(RefreshSession(user_id=user_id, jti=jti, expires_at=expires_at))
+        await self.db.commit()
 
+    async def rotate_refresh_session(
+        self, user_id: uuid.UUID, current_jti: str, new_jti: str, expires_at: datetime
+    ) -> bool:
         result = await self.db.execute(
-            statement.values(refresh_token_jti=new_jti).execution_options(synchronize_session=False)
+            update(RefreshSession)
+            .where(
+                RefreshSession.user_id == user_id,
+                RefreshSession.jti == current_jti,
+                RefreshSession.revoked_at.is_(None),
+                RefreshSession.expires_at > utc_now(),
+            )
+            .values(revoked_at=utc_now())
+            .execution_options(synchronize_session=False)
+        )
+        if result.rowcount != 1:
+            await self.db.rollback()
+            return False
+        self.db.add(RefreshSession(user_id=user_id, jti=new_jti, expires_at=expires_at))
+        await self.db.commit()
+        return True
+
+    async def revoke_refresh_session(self, user_id: uuid.UUID, jti: str) -> bool:
+        result = await self.db.execute(
+            update(RefreshSession)
+            .where(
+                RefreshSession.user_id == user_id,
+                RefreshSession.jti == jti,
+                RefreshSession.revoked_at.is_(None),
+            )
+            .values(revoked_at=utc_now())
+            .execution_options(synchronize_session=False)
         )
         await self.db.commit()
         return result.rowcount == 1
+
+    async def revoke_all_refresh_sessions(self, user_id: uuid.UUID) -> None:
+        await self.db.execute(
+            update(RefreshSession)
+            .where(RefreshSession.user_id == user_id, RefreshSession.revoked_at.is_(None))
+            .values(revoked_at=utc_now())
+            .execution_options(synchronize_session=False)
+        )
+        await self.db.commit()
 
     async def rollback(self) -> None:
         await self.db.rollback()

@@ -56,6 +56,7 @@ app.add_middleware(
 async def log_access(request, call_next):
     """Log method, path, status, and duration only—never bodies, queries, or headers."""
     request_id = uuid.uuid4().hex
+    request.state.request_id = request_id
     started = time.perf_counter()
     try:
         response = await call_next(request)

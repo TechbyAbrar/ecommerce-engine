@@ -23,11 +23,17 @@ class Settings(BaseSettings):
     # --- Database ---
     DATABASE_URL: str = "example_neon_db_url"
 
+    # --- Celery / Redis ---
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
+
     # --- JWT / Security ---
     SECRET_KEY: str = "CHANGE_ME_IN_PRODUCTION"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    MAX_LOGIN_ATTEMPTS: int = 5
+    ACCOUNT_LOCK_MINUTES: int = 15
 
     # --- Email / OTP ---
     SMTP_HOST: str | None = None
@@ -69,6 +75,8 @@ class Settings(BaseSettings):
             raise ValueError("SMTP_USE_SSL and SMTP_USE_STARTTLS cannot both be enabled")
         if self.OTP_LENGTH < 6 or self.OTP_MAX_ATTEMPTS < 1 or self.OTP_EXPIRE_MINUTES < 1:
             raise ValueError("OTP security settings are invalid")
+        if self.MAX_LOGIN_ATTEMPTS < 1 or self.ACCOUNT_LOCK_MINUTES < 1:
+            raise ValueError("Account lock settings are invalid")
         if self.LOG_RETENTION_DAYS < 1:
             raise ValueError("LOG_RETENTION_DAYS must be at least 1")
         return self

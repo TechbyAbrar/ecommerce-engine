@@ -7,18 +7,16 @@ from datetime import timedelta
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.exceptions import InvalidOTPException, OTPDeliveryException, OTPRateLimitException
+from app.auth.exceptions import InvalidOTPException, OTPRateLimitException
 from app.auth.models import OTP, User
 from app.common.enums import OTPPurpose
 from app.common.utils import utc_now
 from app.core.config import settings
-from app.core.email import EmailDeliveryError, EmailService
 
 
 class OTPService:
-    def __init__(self, db: AsyncSession, email_service: EmailService | None = None):
+    def __init__(self, db: AsyncSession):
         self.db = db
-        self.email_service = email_service or EmailService()
 
     @staticmethod
     def _hash(code: str) -> str:
@@ -32,7 +30,7 @@ class OTPService:
         upper_bound = 10 ** settings.OTP_LENGTH
         return f"{secrets.randbelow(upper_bound):0{settings.OTP_LENGTH}d}"
 
-    async def issue(self, user: User, purpose: OTPPurpose) -> None:
+    async def issue(self, user: User, purpose: OTPPurpose) -> str:
         now = utc_now()
         # Serialize issuance per user so concurrent resend requests cannot create
         # two active OTPs for the same purpose.
@@ -61,16 +59,11 @@ class OTPService:
         )
         self.db.add(otp)
         await self.db.commit()
+        return code
 
-        try:
-            await self.email_service.send_otp(
-                user.email, code, purpose.value, settings.OTP_EXPIRE_MINUTES
-            )
-        except EmailDeliveryError as exc:
-            # Do not reveal SMTP details or the code to the client or logs.
-            raise OTPDeliveryException() from exc
-
-    async def verify(self, user_id, purpose: OTPPurpose, code: str) -> None:
+    async def verify(
+        self, user_id, purpose: OTPPurpose, code: str, consume: bool = True
+    ) -> None:
         now = utc_now()
         otp = await self.db.scalar(
             select(OTP)
@@ -93,7 +86,8 @@ class OTPService:
             await self.db.commit()
             raise InvalidOTPException()
 
-        otp.used = True
+        if consume:
+            otp.used = True
         await self.db.commit()
 
     async def cleanup_expired(self) -> int:
