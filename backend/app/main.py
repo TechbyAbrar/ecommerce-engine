@@ -13,6 +13,10 @@ from app.core.config import settings
 from app.core.database import AsyncSessionLocal, init_db
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import get_access_logger, get_logger, setup_logging
+from app.orders.router import router as orders_router
+from app.payments.router import router as payments_router
+from app.payments.webhook import router as payment_webhook_router
+from app.products.router import router as products_router
 
 
 async def _cleanup_expired_otps() -> None:
@@ -89,3 +93,7 @@ async def log_access(request, call_next):
 
 register_exception_handlers(app)
 app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
+app.include_router(products_router, prefix=settings.API_V1_PREFIX)
+app.include_router(orders_router, prefix=settings.API_V1_PREFIX)
+app.include_router(payments_router, prefix=settings.API_V1_PREFIX)
+app.include_router(payment_webhook_router, prefix=settings.API_V1_PREFIX)
