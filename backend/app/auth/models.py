@@ -7,7 +7,7 @@ from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.common.enums import OTPPurpose, UserRole, UserStatus
 from app.common.utils import utc_now
@@ -25,7 +25,13 @@ class User(Base):
     full_name: Mapped[str] = mapped_column(String(255), nullable=True)
 
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="user_role"), default=UserRole.USER, nullable=False
+        Enum(
+            UserRole,
+            name="user_role",
+            values_callable=lambda enum: [member.value for member in enum],
+        ),
+        default=UserRole.USER,
+        nullable=False,
     )
     status: Mapped[UserStatus] = mapped_column(
         Enum(UserStatus, name="user_status"), default=UserStatus.ACTIVE, nullable=False
@@ -37,6 +43,9 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+    details: Mapped["UserDetails | None"] = relationship(
+        "UserDetails", back_populates="user", uselist=False, passive_deletes=True
     )
 
     def __repr__(self) -> str:
@@ -93,3 +102,7 @@ class OTP(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
+
+
+# Register the related profile model whenever the auth models are loaded.
+from app.users.models import UserDetails  # noqa: E402, F401

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import RefreshSession, User
 from app.auth.schemas import UserCreate
+from app.common.enums import UserRole
 from app.common.utils import utc_now
 from app.core.security import hash_password
 
@@ -27,13 +28,28 @@ class UserRepository:
         result = await self.db.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
 
-    async def create(self, user_in: UserCreate) -> User:
+    async def create(
+        self, user_in: UserCreate, *, role: UserRole = UserRole.USER, is_verified: bool = False
+    ) -> User:
         user = User(
             email=user_in.email,
             hashed_password=hash_password(user_in.password),
             full_name=user_in.full_name,
+            role=role,
+            is_verified=is_verified,
         )
         self.db.add(user)
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user
+
+    async def count_by_role(self, role: UserRole) -> int:
+        from sqlalchemy import func
+
+        return await self.db.scalar(select(func.count()).select_from(User).where(User.role == role)) or 0
+
+    async def update_role(self, user: User, role: UserRole) -> User:
+        user.role = role
         await self.db.commit()
         await self.db.refresh(user)
         return user

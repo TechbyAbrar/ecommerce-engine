@@ -19,6 +19,7 @@ from app.auth.exceptions import (
     InvalidOTPException,
     InvalidTokenException,
     UserAlreadyExistsException,
+    UserNotFoundException,
 )
 from app.auth.models import User
 from app.auth.otp_service import OTPService
@@ -33,7 +34,7 @@ from app.auth.schemas import (
 )
 from app.auth.security import create_access_token, create_refresh_token, decode_token
 from app.auth.tasks import send_otp_email
-from app.common.enums import OTPPurpose, TokenType, UserStatus
+from app.common.enums import OTPPurpose, TokenType, UserRole, UserStatus
 from app.common.utils import utc_now
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -72,6 +73,52 @@ class AuthService:
             },
         )
         return user
+
+    async def create_administrative_user(
+        self, user_in: UserCreate, role: UserRole, *, force: bool = False
+    ) -> User:
+        """Create a verified CLI-managed account without an email OTP workflow."""
+        if role not in {UserRole.USER, UserRole.STAFF, UserRole.ADMIN, UserRole.SUPERUSER}:
+            raise ValueError("Unsupported user role")
+        if await self.repository.get_by_email(user_in.email):
+            raise UserAlreadyExistsException()
+        if role == UserRole.SUPERUSER and not force:
+            if await self.repository.count_by_role(UserRole.SUPERUSER):
+                raise ValueError("A superuser already exists; pass force=True to create another")
+        try:
+            return await self.repository.create(user_in, role=role, is_verified=True)
+        except IntegrityError as exc:
+            await self.repository.rollback()
+            raise UserAlreadyExistsException() from exc
+
+    async def promote_user(self, email: str, role: UserRole) -> User:
+        ranks = {UserRole.USER: 0, UserRole.STAFF: 1, UserRole.ADMIN: 2, UserRole.SUPERUSER: 3}
+        user = await self.repository.get_by_email(email)
+        if not user:
+            raise UserNotFoundException()
+        if role not in ranks or ranks[role] <= ranks[user.role]:
+            raise ValueError("Target role must be higher than the user's current role")
+        return await self.repository.update_role(user, role)
+
+    async def demote_user(self, email: str, role: UserRole = UserRole.USER) -> User:
+        ranks = {UserRole.USER: 0, UserRole.STAFF: 1, UserRole.ADMIN: 2, UserRole.SUPERUSER: 3}
+        user = await self.repository.get_by_email(email)
+        if not user:
+            raise UserNotFoundException()
+        if role not in ranks or ranks[role] >= ranks[user.role]:
+            raise ValueError("Target role must be lower than the user's current role")
+        return await self.repository.update_role(user, role)
+
+    async def admin_reset_password(self, email: str, new_password: str) -> None:
+        """Reset a password for controlled CLI administration and revoke sessions."""
+        from app.common.validators import validate_password_strength
+
+        validate_password_strength(new_password)
+        user = await self.repository.get_by_email(email)
+        if not user:
+            raise UserNotFoundException()
+        await self.repository.update_password_hash(user.id, self._hash_password(new_password))
+        await self.repository.revoke_all_refresh_sessions(user.id)
 
     async def authenticate(self, credentials: UserLogin) -> Token:
         user = await self.repository.get_by_email(credentials.email)

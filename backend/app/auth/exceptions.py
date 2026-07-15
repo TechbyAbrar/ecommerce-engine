@@ -43,6 +43,13 @@ class InactiveUserException(AppException):
         super().__init__(message)
 
 
+class UserNotFoundException(UnauthorizedException):
+    error_code = "USER_NOT_FOUND"
+
+    def __init__(self, message: str = "User was not found"):
+        super().__init__(message)
+
+
 class AccountLockedException(AppException):
     status_code = status.HTTP_423_LOCKED
     error_code = "ACCOUNT_LOCKED"
@@ -72,4 +79,3 @@ class OTPRateLimitException(AppException):
 
     def __init__(self, message: str = "Please wait before requesting another code"):
         super().__init__(message)
-
