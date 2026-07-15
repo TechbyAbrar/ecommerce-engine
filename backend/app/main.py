@@ -9,7 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.auth import models as auth_models  # noqa: F401 - registers ORM metadata
 from app.auth.otp_service import OTPService
 from app.auth.router import router as auth_router
+from app.categories.router import router as categories_router
 from app.core.config import settings
+from app.core import reference_models  # noqa: F401 - registers ORM metadata
 from app.core.database import AsyncSessionLocal, init_db
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import get_access_logger, get_logger, setup_logging
@@ -34,7 +36,8 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     setup_logging()
-    await init_db()
+    if settings.ENVIRONMENT.lower() != "production":
+        await init_db()
     logger.info("application_started")
     cleanup_task = asyncio.create_task(_cleanup_expired_otps())
     try:
@@ -93,6 +96,7 @@ async def log_access(request, call_next):
 
 register_exception_handlers(app)
 app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
+app.include_router(categories_router, prefix=settings.API_V1_PREFIX)
 app.include_router(products_router, prefix=settings.API_V1_PREFIX)
 app.include_router(orders_router, prefix=settings.API_V1_PREFIX)
 app.include_router(payments_router, prefix=settings.API_V1_PREFIX)
