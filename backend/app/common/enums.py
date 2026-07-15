@@ -10,7 +10,9 @@ class TokenType(str, Enum):
 
 
 class UserRole(str, Enum):
+    SUPERUSER = "superuser"
     ADMIN = "admin"
+    STAFF = "staff"
     USER = "user"
 
 
