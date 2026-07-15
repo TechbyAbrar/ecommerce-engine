@@ -9,6 +9,7 @@ class ProviderResult:
     transaction_id: str
     successful: bool
     raw_response: dict[str, Any]
+    failed: bool = False
 
 
 class PaymentStrategy(ABC):

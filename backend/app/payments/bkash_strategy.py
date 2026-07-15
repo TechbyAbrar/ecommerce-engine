@@ -84,7 +84,8 @@ class BKashStrategy(PaymentStrategy):
         transaction_id = body.get("paymentID")
         if not transaction_id:
             raise PaymentProviderException("bKash did not return a payment ID")
-        return ProviderResult(transaction_id, body.get("transactionStatus") == "Completed", body)
+        status = body.get("transactionStatus")
+        return ProviderResult(transaction_id, status == "Completed", body, status in {"Cancelled", "Declined", "Expired", "Failed"})
 
     async def confirm(self, transaction_id: str, payment_method_id: str | None = None) -> ProviderResult:
         try:
@@ -98,4 +99,5 @@ class BKashStrategy(PaymentStrategy):
                 body = response.json()
         except httpx.HTTPError as exc:
             raise PaymentProviderException("bKash payment could not be executed") from exc
-        return ProviderResult(transaction_id, body.get("transactionStatus") == "Completed", body)
+        status = body.get("transactionStatus")
+        return ProviderResult(transaction_id, status == "Completed", body, status in {"Cancelled", "Declined", "Expired", "Failed"})

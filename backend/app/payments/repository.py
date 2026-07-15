@@ -23,6 +23,13 @@ class PaymentRepository:
             statement = statement.with_for_update()
         return await self.db.scalar(statement)
 
+    async def get_pending_for_order(self, order_id: uuid.UUID) -> Payment | None:
+        return await self.db.scalar(
+            select(Payment)
+            .where(Payment.order_id == order_id, Payment.status == PaymentStatus.PENDING)
+            .order_by(Payment.created_at.desc())
+        )
+
     async def list_for_order_ids(self, order_ids: list[uuid.UUID]) -> list[Payment]:
         if not order_ids:
             return []

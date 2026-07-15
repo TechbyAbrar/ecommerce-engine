@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     # --- CORS ---
     BACKEND_CORS_ORIGINS: list[str] = ["*"]
 
+    # --- Payments ---
+    STRIPE_SECRET_KEY: SecretStr | None = None
+    STRIPE_CURRENCY: str = "usd"
+    STRIPE_WEBHOOK_SECRET: SecretStr | None = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
