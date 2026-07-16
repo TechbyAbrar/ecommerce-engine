@@ -1,103 +1,152 @@
-#project file structure
+# Backend project structure
 
-app/
-│
-├── core/
-│   ├── config.py
-│   ├── database.py
-│   ├── security.py
-│   ├── logging.py
-│   ├── celery.py
-│   ├── email.py
-│   ├── exceptions.py
+This document reflects the current backend layout in the repository.
+
+## Root backend layout
+
+backend/
+├── .dockerignore
+├── .env
+├── .env.example
+├── .gitignore
+├── .python-version
+├── Dockerfile
+├── README.md
+├── alembic.ini
+├── docker-compose.yml
+├── pyproject.toml
+├── uv.lock
+├── alembic/
+├── app/
+├── cli/
+├── docker/
+├── docs/
+└── logs/
+
+## Application package
+
+backend/app/
+├── __init__.py
+├── main.py
+├── alembic/
+├── auth/
+│   ├── __init__.py
 │   ├── dependencies.py
-│   └── constants.py
-│
+│   ├── exceptions.py
+│   ├── models.py
+│   ├── otp_service.py
+│   ├── repository.py
+│   ├── router.py
+│   ├── schemas.py
+│   ├── security.py
+│   ├── service.py
+│   └── tasks.py
+├── categories/
+│   ├── __init__.py
+│   ├── cache.py
+│   ├── dfs.py
+│   ├── models.py
+│   ├── repository.py
+│   ├── router.py
+│   ├── schemas.py
+│   └── service.py
 ├── common/
+│   ├── __init__.py
 │   ├── enums.py
 │   ├── pagination.py
 │   ├── responses.py
 │   ├── utils.py
 │   └── validators.py
-│
-├── auth/
-│   ├── router.py
-│   ├── service.py
-│   ├── repository.py
-│   ├── models.py
-│   ├── schemas.py
+├── core/
+│   ├── __init__.py
+│   ├── celery.py
+│   ├── config.py
+│   ├── constants.py
+│   ├── database.py
 │   ├── dependencies.py
-│   ├── security.py
-│   ├── otp_service.py
-│   ├── tasks.py
-│   └── exceptions.py
-│
-├── users/
-│   ├── router.py
-│   ├── service.py
-│   ├── repository.py
-│   ├── models.py
-│   ├── schemas.py
-│   └── exceptions.py
-│
-├── categories/
-│   ├── router.py
-│   ├── service.py
-│   ├── repository.py
-│   ├── models.py
-│   ├── schemas.py
-│   ├── dfs.py
-│   └── cache.py
-│
-├── products/
-│   ├── router.py
-│   ├── service.py
-│   ├── repository.py
-│   ├── models.py
-│   ├── schemas.py
-│   ├── dependencies.py
-│   └── exceptions.py
-│
-├── orders/
-│   ├── router.py
-│   ├── service.py
-│   ├── repository.py
-│   ├── models.py
-│   ├── schemas.py
-│   ├── algorithms.py
-│   └── exceptions.py
-│
-├── payments/
-│   ├── router.py
-│   ├── service.py
-│   ├── repository.py
-│   ├── models.py
-│   ├── schemas.py
-│   ├── strategy.py
-│   ├── factory.py
-│   ├── stripe_strategy.py
-│   ├── bkash_strategy.py
-│   ├── webhook.py
-│   └── exceptions.py
-│
-├── redis/
-│   ├── client.py
-│   └── cache.py
-│
+│   ├── email.py
+│   ├── exceptions.py
+│   ├── logging.py
+│   ├── operations_service.py
+│   ├── reference_models.py
+│   ├── reference_repository.py
+│   ├── reference_service.py
+│   └── security.py
 ├── db/
-│   ├── seed.py
-│   └── base.py
-│
+│   ├── __init__.py
+│   ├── base.py
+│   └── seed.py
+├── orders/
+│   ├── __init__.py
+│   ├── algorithms.py
+│   ├── exceptions.py
+│   ├── models.py
+│   ├── repository.py
+│   ├── router.py
+│   ├── schemas.py
+│   └── service.py
+├── payments/
+│   ├── __init__.py
+│   ├── bkash_strategy.py
+│   ├── exceptions.py
+│   ├── factory.py
+│   ├── models.py
+│   ├── repository.py
+│   ├── router.py
+│   ├── schemas.py
+│   ├── service.py
+│   ├── strategy.py
+│   ├── stripe_strategy.py
+│   └── webhook.py
+├── products/
+│   ├── __init__.py
+│   ├── cache.py
+│   ├── dependencies.py
+│   ├── exceptions.py
+│   ├── models.py
+│   ├── repository.py
+│   ├── router.py
+│   ├── schemas.py
+│   ├── service.py
+│   └── storage.py
+├── redis/
+│   ├── __init__.py
+│   ├── cache.py
+│   └── client.py
 ├── tests/
+│   ├── conftest.py
 │   ├── auth/
-│   ├── users/
-│   ├── products/
 │   ├── orders/
 │   ├── payments/
-│   └── conftest.py
-│
-├── main.py
-│
+│   ├── products/
+│   └── users/
+└── users/
+    ├── __init__.py
+    ├── exceptions.py
+    ├── models.py
+    ├── repository.py
+    ├── router.py
+    ├── schemas.py
+    └── service.py
+
+## CLI package
+
+backend/cli/
 ├── __init__.py
-│
-└── alembic/
+├── dependencies.py
+├── exceptions.py
+├── manage.py
+├── output.py
+├── prompts.py
+└── commands/
+
+## Infrastructure and deployment files
+
+backend/docker/
+├── api-entrypoint.sh
+├── healthcheck.py
+├── migrate-entrypoint.sh
+└── worker-entrypoint.sh
+
+backend/docker-compose.yml
+backend/Dockerfile
