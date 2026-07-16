@@ -18,12 +18,18 @@ COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
 
-# Copy project
+# Copy project source
 COPY . .
 
 # Install project
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
+
+# Make entrypoint scripts executable
+RUN chmod +x \
+    docker/api-entrypoint.sh \
+    docker/worker-entrypoint.sh \
+    docker/migrate-entrypoint.sh
 
 
 #############################
@@ -48,4 +54,4 @@ USER app
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["./docker/api-entrypoint.sh"]
