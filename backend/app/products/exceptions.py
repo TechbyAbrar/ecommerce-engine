@@ -1,4 +1,4 @@
-from app.core.exceptions import ConflictException, NotFoundException
+from app.core.exceptions import AppException, ConflictException, NotFoundException
 
 
 class ProductNotFoundException(NotFoundException):
@@ -11,5 +11,10 @@ class ProductNotFoundException(NotFoundException):
 class ProductSKUExistsException(ConflictException):
     error_code = "PRODUCT_SKU_EXISTS"
 
-    def __init__(self, message: str = "A product with this SKU already exists"):
+
+class ProductImageValidationException(AppException):
+    status_code = 422
+    error_code = "PRODUCT_IMAGE_INVALID"
+
+    def __init__(self, message: str):
         super().__init__(message)

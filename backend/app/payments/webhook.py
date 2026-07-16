@@ -29,7 +29,7 @@ async def _construct_stripe_event(raw_body: bytes, signature: str | None) -> str
             signature,
             webhook_secret.get_secret_value(),
         )
-    except (ValueError, AttributeError, stripe.SignatureVerificationError) as exc:
+    except (ValueError, AttributeError, stripe.SignatureVerificationError):
         raise InvalidWebhookException("Invalid Stripe webhook signature")
 
 
@@ -56,8 +56,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     return SuccessResponse(message="Stripe webhook processed", data=payment)
 
 
-@router.api_route("/bkash", methods=["GET", "POST"], response_model=SuccessResponse[PaymentRead])
-async def bkash_callback(request: Request, db: AsyncSession = Depends(get_db)):
+async def _process_bkash_callback(request: Request, db: AsyncSession) -> SuccessResponse[PaymentRead]:
     # bKash completion is checked by server-side Execute Payment, rather than
     # trusting callback parameters that could be supplied by a browser.
     transaction_id = request.query_params.get("paymentID")
@@ -71,3 +70,23 @@ async def bkash_callback(request: Request, db: AsyncSession = Depends(get_db)):
         raise InvalidWebhookException("Missing bKash paymentID")
     payment = await PaymentService(db).process_bkash_callback(transaction_id)
     return SuccessResponse(message="bKash callback processed", data=payment)
+
+
+@router.get(
+    "/bkash",
+    response_model=SuccessResponse[PaymentRead],
+    operation_id="bkash_redirect_callback",
+)
+async def bkash_redirect_callback(request: Request, db: AsyncSession = Depends(get_db)):
+    """Handle the customer redirect after bKash checkout."""
+    return await _process_bkash_callback(request, db)
+
+
+@router.post(
+    "/bkash",
+    response_model=SuccessResponse[PaymentRead],
+    operation_id="bkash_webhook_receiver",
+)
+async def bkash_webhook_receiver(request: Request, db: AsyncSession = Depends(get_db)):
+    """Receive bKash's server-to-server payment notification."""
+    return await _process_bkash_callback(request, db)

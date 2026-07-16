@@ -1,0 +1,50 @@
+# Git
+.git
+.github
+
+# IDE
+.vscode
+.idea
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+
+# Virtual Env
+.venv
+env
+venv
+
+# Logs
+*.log
+logs/
+
+# Tests
+tests/
+
+# Docs
+docs/
+
+# Local
+.env
+.env.*
+
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/
+
+# Misc
+README.md

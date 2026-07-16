@@ -58,5 +58,13 @@ class ProductCache:
         except Exception:
             pass
 
+    async def clear(self) -> bool:
+        """Clear only the Redis database configured for the product cache."""
+        try:
+            await self._redis().flushdb()
+            return True
+        except Exception:
+            return False
+
 
 product_cache = ProductCache()

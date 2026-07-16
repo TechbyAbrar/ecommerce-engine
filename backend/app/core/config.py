@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     STRIPE_CURRENCY: str = "usd"
     STRIPE_WEBHOOK_SECRET: SecretStr | None = None
 
+    # --- Product uploads ---
+    PRODUCT_IMAGE_STORAGE_PATH: str = "media/products/originals"
+    PRODUCT_IMAGE_ALLOWED_CONTENT_TYPES: set[str] = {"image/jpeg", "image/png", "image/webp"}
+    PRODUCT_IMAGE_MAX_SIZE_BYTES: int = 5 * 1024 * 1024
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -84,6 +89,10 @@ class Settings(BaseSettings):
             raise ValueError("Account lock settings are invalid")
         if self.LOG_RETENTION_DAYS < 1:
             raise ValueError("LOG_RETENTION_DAYS must be at least 1")
+        if self.PRODUCT_IMAGE_MAX_SIZE_BYTES < 1:
+            raise ValueError("PRODUCT_IMAGE_MAX_SIZE_BYTES must be at least 1")
+        if not self.PRODUCT_IMAGE_ALLOWED_CONTENT_TYPES:
+            raise ValueError("PRODUCT_IMAGE_ALLOWED_CONTENT_TYPES must not be empty")
         return self
 
 
