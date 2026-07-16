@@ -1,0 +1,93 @@
+version: "3.9"
+
+name: ecommerce-engine
+
+services:
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: ecommerce-api
+
+    command: >
+      uv run uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+
+    env_file:
+      - .env
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - .:/app
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+    init: true
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: ecommerce-worker
+
+    command: >
+      uv run celery
+      -A app.core.celery:celery_app
+      worker
+      --loglevel=info
+      --concurrency=1
+
+    env_file:
+      - .env
+
+    volumes:
+      - .:/app
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+    init: true
+
+  redis:
+    image: redis:7-alpine
+
+    container_name: ecommerce-redis
+
+    command: redis-server --appendonly yes
+
+    ports:
+      - "6379:6379"
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
