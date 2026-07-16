@@ -22,9 +22,11 @@ dependencies = [
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.32",
     "redis>=6.4.0",
+    "rich>=13.9.0",
     "sqlalchemy>=2.0,<3.0",
     "stripe>=14.4.0",
     "structlog>=26.1.0",
+    "typer>=0.16.0",
     "uvicorn[standard]>=0.51.0",
 ]
 
